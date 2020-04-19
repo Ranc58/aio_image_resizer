@@ -25,7 +25,7 @@ Python version required: 3.7+
 `python3 main.py`
 
 Then you can use this handlers for work
-1) `/\` - `POST` request with `multipart` file. And you need add some query params : \
+1) `/` - `POST` request with `multipart` file. And you need add some query params : \
         1. `-s --scale` scale to resize image. \
         2. `-ws --width` width of out image. \
         3. `-hs --height` height of out image. 
