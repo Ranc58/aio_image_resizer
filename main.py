@@ -1,5 +1,5 @@
 import asyncio
-import multiprocessing
+import signal
 from concurrent.futures.process import ProcessPoolExecutor
 from contextlib import suppress
 
@@ -14,6 +14,10 @@ from service.repository import RedisRepository
 from views import load_image, get_image, check_status
 
 
+def register_signal_handler():
+    signal.signal(signal.SIGINT, lambda _, __: None)
+
+
 async def resize_task(app, file_id):
     loop = asyncio.get_event_loop()
     data = await app.repository.get(file_id)
@@ -22,21 +26,21 @@ async def resize_task(app, file_id):
         "status": "resizing"
     })
     await app.repository.update(file_id, data)
-    result = await loop.run_in_executor(
+    loop.run_in_executor(
         app.process_pool,
         image_resizer.resize_img,
         data.get('file_name'), data.get('width'), data.get('height'), data.get('scale')
     )
     data.update({
         "status": "done",
-        "updated_file_path": result
+        "updated_file_path": None
     })
     await app.repository.update(file_id, data)
 
 
 async def input_queue_listener(app):
+    print('listen input data..')
     while True:
-        print('listen input data..')
         file_id = await app.input_images_queue.get()
         app.loop.create_task(resize_task(app, file_id))
         app.input_images_queue.task_done()
@@ -57,23 +61,23 @@ async def files_storage_process(app):
     app.files_storage = files_storage
     print("Files storage connected")
     yield
+    print("Files storage disconnected")
 
 
 async def queue_listener_process(app):
-    print('Start services...')
     input_images_queue = asyncio.Queue()
     app.input_images_queue = input_images_queue
     process_pool = ProcessPoolExecutor(
-        max_workers=multiprocessing.cpu_count()
-    )  # todo Resolve race condition(?)
-    input_queue_listener_task = app.loop.create_task(
+        initializer=register_signal_handler
+    )
+    loop = asyncio.get_event_loop()
+    input_queue_listener_task = loop.create_task(
         input_queue_listener(app)
     )
     app.process_pool = process_pool
     print('Services started')
     yield
 
-    print('Stop services')
     input_queue_listener_task.cancel()
     app.process_pool.shutdown(wait=True)
     print('Services stopped')

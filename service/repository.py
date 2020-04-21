@@ -74,9 +74,7 @@ class RedisRepository(Repository):
     async def insert(self, key: str, data):
         key = await self._convert_key(key)
         prepared_data = await self._convert_data(data)
-        print('start set')
         result = await self.pool.set(key, prepared_data)
-        print('start set expire')
         await self.pool.expire(key, 60 * 60 * 5)  # 5 hours todo del or think about another timeout
         return result
 
