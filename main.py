@@ -9,10 +9,7 @@ from aiohttp import web
 from aiohttp_apispec import validation_middleware, setup_aiohttp_apispec
 
 from config import CONFIG
-from service.file_storage import LocalFileStorage
-from service.image_resizer import ImageResizer
-from service.repository import RedisRepository
-
+from service import LocalFileStorage, ImageResizer, RedisRepository
 from views import load_image, get_image, check_status
 
 logger = logging.getLogger('app_logger')
