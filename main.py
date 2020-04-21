@@ -1,5 +1,7 @@
 import asyncio
+import logging
 import signal
+import time
 from concurrent.futures.process import ProcessPoolExecutor
 from contextlib import suppress
 
@@ -12,6 +14,8 @@ from service.image_resizer import ImageResizer
 from service.repository import RedisRepository
 
 from views import load_image, get_image, check_status
+
+logger = logging.getLogger('app_logger')
 
 
 def register_signal_handler():
@@ -26,23 +30,30 @@ async def resize_task(app, file_id):
         "status": "resizing"
     })
     await app.repository.update(file_id, data)
-    loop.run_in_executor(
+    start_time = time.time()
+    start_time_formatted = time.strftime("%H:%M:%S", time.localtime(start_time))
+    new_image_path = await loop.run_in_executor(
         app.process_pool,
         image_resizer.resize_img,
         data.get('file_name'), data.get('width'), data.get('height'), data.get('scale')
     )
+    end_time = time.time()
+    end_time_formatted = time.strftime("%H:%M:%S", time.localtime(end_time))
+    logger.debug(
+        f'Start time: {start_time_formatted} End time: {end_time_formatted} Elapsed: {end_time-start_time}')
     data.update({
         "status": "done",
-        "updated_file_path": None
+        "updated_file_path": new_image_path
     })
     await app.repository.update(file_id, data)
 
 
 async def input_queue_listener(app):
-    print('listen input data..')
+    logger.debug('listen input data..')
+    loop = asyncio.get_event_loop()
     while True:
         file_id = await app.input_images_queue.get()
-        app.loop.create_task(resize_task(app, file_id))
+        loop.create_task(resize_task(app, file_id))
         app.input_images_queue.task_done()
 
 
@@ -50,18 +61,18 @@ async def repository_process(app):
     repository = RedisRepository()
     await repository.connect()
     app.repository = repository
-    print("Repository connected") # todo change everywhere to logging
+    logger.info("Repository started")
     yield
     await app.repository.disconnect()
-    print("Disconnected from repository")
+    logger.info("Repository stopped")
 
 
 async def files_storage_process(app):
     files_storage = LocalFileStorage(CONFIG['files_path'])
     app.files_storage = files_storage
-    print("Files storage connected")
+    logger.info("Files storage started")
     yield
-    print("Files storage disconnected")
+    logger.info("Files storage stopped")
 
 
 async def queue_listener_process(app):
@@ -75,24 +86,27 @@ async def queue_listener_process(app):
         input_queue_listener(app)
     )
     app.process_pool = process_pool
-    print('Services started')
+    logger.info('Services started')
     yield
-
     input_queue_listener_task.cancel()
     app.process_pool.shutdown(wait=True)
-    print('Services stopped')
+    logger.info('Services stopped')
 
 
 if __name__ == '__main__':
     with suppress(KeyboardInterrupt):
+        handler = logging.StreamHandler()
+        logger.addHandler(handler)
+        if CONFIG.get('debug'):
+            logger.setLevel(logging.DEBUG)
         app = web.Application()
         app.cleanup_ctx.append(repository_process)
         app.cleanup_ctx.append(files_storage_process)
         app.cleanup_ctx.append(queue_listener_process)
         app.add_routes([
-            web.post('/', load_image),
-            web.get('/{file_name}', get_image),
-            web.get('/{file_name}/check', check_status),
+            web.post('/api/v1/image', load_image),
+            web.get('/api/v1/image/{image_id}', get_image),
+            web.get('/api/v1/image/{image_id}/check', check_status),
         ])
         web.run_app(
             app,

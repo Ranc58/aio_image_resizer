@@ -9,4 +9,5 @@ CONFIG = {
     'host': os.environ.get('HOST', 'localhost'),
     'port': int(os.environ.get('PORT', 8080)),
     'files_path': os.environ.get('TEMP_FILES_PATH', os.getcwd()),
+    'debug': os.environ.get('DEBUG')
 }

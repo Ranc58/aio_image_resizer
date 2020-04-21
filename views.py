@@ -38,8 +38,10 @@ async def load_image(request):
 
 
 async def check_status(request):
-    file_name = request.match_info['file_name']
-    file_data = await request.app.repository.get(file_name)
+    image_id = request.match_info.get('image_id')
+    if not image_id:
+        raise web.HTTPBadRequest
+    file_data = await request.app.repository.get(image_id)
     if not file_data:
         raise web.HTTPNotFound()
     data = {
@@ -50,12 +52,18 @@ async def check_status(request):
 
 
 async def get_image(request):
-    file_name = request.match_info['file_name']
-    file_data = await request.app.repository.get(file_name)
+    image_id = request.match_info.get('image_id')
+    if not image_id:
+        raise web.HTTPBadRequest
+    file_data = await request.app.repository.get(image_id)
     if not file_data:
         raise web.HTTPNotFound()
     if file_data.get('status') != 'done':
-        return web.json_response(data=file_data, status=200)
+        data = {
+            'id': file_data.get('id'),
+            'status': file_data.get('status')
+        }
+        return web.json_response(data=data, status=200)
     response = web.StreamResponse()
     response.headers['Content-Disposition'] = f'attachment; filename="{file_data.get("file_name")}"'
     await response.prepare(request)
@@ -65,5 +73,5 @@ async def get_image(request):
             await response.write(line)
     response.force_close()
     os.remove(file_path)
-    await request.app.repository.delete(file_name)
+    await request.app.repository.delete(image_id)
     return response
