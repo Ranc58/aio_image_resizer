@@ -30,10 +30,7 @@ class ImageResizer:
     def _resize_image(self, image):
         new_width = self.width
         new_height = self.height
-        if ((self.width and self.scale) or
-                (self.height and self.scale)):
-            return print('Please enter availiable arguments combination!')  # todo move to validator
-        elif self.width and self.height:
+        if self.width and self.height:
             return image.resize((new_width, new_height))
         elif self.width:
             new_height = int(image.size[1] / (image.size[0] / self.width))

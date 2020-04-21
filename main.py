@@ -6,7 +6,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from contextlib import suppress
 
 from aiohttp import web
-
+from aiohttp_apispec import validation_middleware, setup_aiohttp_apispec
 
 from config import CONFIG
 from service.file_storage import LocalFileStorage
@@ -103,6 +103,8 @@ if __name__ == '__main__':
         app.cleanup_ctx.append(repository_process)
         app.cleanup_ctx.append(files_storage_process)
         app.cleanup_ctx.append(queue_listener_process)
+        setup_aiohttp_apispec(app)
+        app.middlewares.append(validation_middleware)
         app.add_routes([
             web.post('/api/v1/image', load_image),
             web.get('/api/v1/image/{image_id}', get_image),

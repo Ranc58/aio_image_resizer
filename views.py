@@ -4,11 +4,14 @@ import datetime
 
 from aiofile import AIOFile, Writer, LineReader
 from aiohttp import web
+from aiohttp_apispec import request_schema
 
-from Image import ImageData
+from serializer import ImageSchema
+from models.Image import ImageData
 from config import CONFIG
 
 
+@request_schema(ImageSchema(), locations=['query'])
 async def load_image(request):
     reader = await request.multipart()
     field = await reader.next()
@@ -34,7 +37,7 @@ async def load_image(request):
     )
     await request.app.repository.insert(file_id, file_data.to_json())
     await request.app.input_images_queue.put(file_id)
-    return web.json_response(data={"id": file_id, "status": "ok"}, status=201)
+    return web.json_response(data={"id": file_id, "status": "loaded"}, status=201)
 
 
 async def check_status(request):
