@@ -15,10 +15,11 @@ Python version required: 3.7+
    `pip3 install -r requirements.txt` (alternatively try add `sudo` before command)
    
 3. You need redis. Add to your environ `REDIS_HOST`(default-`localhost`), 
-`REDIS_PORT`(default-`6379`), `REDIS_PASS`(default-`SetPass`) . For debug set something to `DEBUG` env.
+`REDIS_PORT`(default-`6379`), `REDIS_PASS`(default-`SetPass`) .
 
 4. If it need - add to environ path to files dir `TEMP_FILES_PATH` (default - project root)
 
+5. For debug set something to `DEBUG` env.
 
 # How to run
 
@@ -28,8 +29,8 @@ Then you can use this handlers for work
 1) `/api/v1/image` - `POST` request with `multipart` file. And you need add some query params : \
         1. `-s --scale` scale to resize image. \
         2. `-ws --width` width of out image. \
-        3. `-hs --height` height of out image. 
-   Attention! `scale` with `width/height` aren't incompatible!     
+        3. `-hs --height` height of out image. \
+   Attention! `scale` with `width/height` are incompatible!     
    Response example:
    ```
    {
