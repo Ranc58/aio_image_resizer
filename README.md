@@ -2,7 +2,7 @@
 
 Image resizer api. Based on aiohttp/redis/multiprocessing.
 Resize work running on different processes, work status stored in redis.
-Writing for fun.
+Written for fun.
 
 
 # How to install
