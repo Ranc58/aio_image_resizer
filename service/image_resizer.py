@@ -2,6 +2,12 @@ import io
 
 from PIL import Image
 
+from service.file_storage import ImageNotFoundError, PathNotFoundError
+
+
+class ImageResizerError(BaseException):
+    pass
+
 
 class ImageResizer:
 
@@ -13,7 +19,10 @@ class ImageResizer:
         self.scale = None
 
     def _get_image(self):
-        image_data = self.file_storage.get(self.image_name)
+        try:
+            image_data = self.file_storage.get(self.image_name)
+        except ImageNotFoundError:
+            raise
         image = Image.open(io.BytesIO(image_data))
         return image
 
@@ -21,7 +30,7 @@ class ImageResizer:
         format = self.image_name.split('.')[-1:][0].upper()
         bytes_data = io.BytesIO()
         image.save(bytes_data, format=format)
-        saved = self.file_storage.save(bytes_data.getvalue(), self.image_name)
+        saved = self.file_storage.save_result(bytes_data.getvalue(), self.image_name)
         return saved
 
     def _delete_default_image(self):
@@ -43,9 +52,15 @@ class ImageResizer:
 
     def resize_img(self, image_name, width, height, scale):
         self.image_name, self.width, self.height, self.scale = image_name, width, height, scale
-        image_before_update = self._get_image()
+        error = None
+        try:
+            image_before_update = self._get_image()
+        except ImageNotFoundError as e:
+            return None, str(e)
         image_after_update = self._resize_image(image_before_update)
         self._delete_default_image()
-        saved = self._save_image(image_after_update)
-        return saved
-
+        try:
+            saved = self._save_image(image_after_update)
+        except PathNotFoundError as e:
+            return None, str(e)
+        return saved, error

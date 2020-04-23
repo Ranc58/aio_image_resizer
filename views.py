@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import os
 import uuid
 import datetime
@@ -9,6 +11,9 @@ from aiohttp_apispec import request_schema
 from serializer import ImageSchema
 from models.Image import ImageData
 from config import CONFIG
+from service.file_storage import ImageNotFoundError
+
+logger = logging.getLogger('app_logger')
 
 
 @request_schema(ImageSchema(), locations=['query'])
@@ -17,14 +22,7 @@ async def load_image(request):
     field = await reader.next()
     current_timestamp = datetime.datetime.now().timestamp()
     filename = f'{current_timestamp}-{field.filename}'
-    async with AIOFile(os.path.join(CONFIG['files_path'], filename), 'wb') as f:
-        writer = Writer(f)
-        while True:
-            chunk = await field.read_chunk()
-            if not chunk:
-                break
-            await writer(chunk)
-        await f.fsync()
+    await request.app.file_storage.save_default(filename, field)
     file_id = str(uuid.uuid4())[:13]
     file_data = ImageData(
         id=file_id,
@@ -75,6 +73,9 @@ async def get_image(request):
         async for line in LineReader(f):
             await response.write(line)
     response.force_close()
-    os.remove(file_path)
+    try:
+        await request.app.file_storage.delete(file_path)
+    except ImageNotFoundError as e:
+        logger.error(e)
     await request.app.repository.delete(image_id)
     return response

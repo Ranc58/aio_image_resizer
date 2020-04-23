@@ -29,19 +29,27 @@ async def resize_task(app, file_id):
     await app.repository.update(file_id, data)
     start_time = time.time()
     start_time_formatted = time.strftime("%H:%M:%S", time.localtime(start_time))
-    new_image_path = await loop.run_in_executor(
+
+    new_image_path, error = await loop.run_in_executor(
         app.process_pool,
         image_resizer.resize_img,
         data.get('file_name'), data.get('width'), data.get('height'), data.get('scale')
     )
-    end_time = time.time()
-    end_time_formatted = time.strftime("%H:%M:%S", time.localtime(end_time))
-    logger.debug(
-        f'Start time: {start_time_formatted} End time: {end_time_formatted} Elapsed: {end_time-start_time}')
-    data.update({
-        "status": "done",
-        "updated_file_path": new_image_path
-    })
+    if error:
+        logger.error(f"{error}")
+        data.update({
+            "status": "error",
+            "updated_file_path": None,
+        })
+    else:
+        end_time = time.time()
+        end_time_formatted = time.strftime("%H:%M:%S", time.localtime(end_time))
+        logger.debug(
+            f'Start time: {start_time_formatted} End time: {end_time_formatted} Elapsed: {end_time-start_time}')
+        data.update({
+            "status": "done",
+            "updated_file_path": new_image_path
+        })
     await app.repository.update(file_id, data)
 
 
