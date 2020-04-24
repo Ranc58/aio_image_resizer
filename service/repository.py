@@ -1,9 +1,12 @@
 import abc
 import asyncio
 import json
+import logging
 
 import aioredis
 from config import CONFIG
+
+logger = logging.getLogger('app_logger')
 
 
 class Repository(metaclass=abc.ABCMeta):
@@ -51,7 +54,7 @@ class RedisRepository(Repository):
                     db=0,
                 )
             except OSError as e:
-                print(f'Error: {e}.\nTry repoolect in 2 sec ')
+                logger.error(f'Error: {e}.\nTry repoolect in 2 sec ')
                 await asyncio.sleep(2)
 
     async def disconnect(self):
@@ -75,7 +78,7 @@ class RedisRepository(Repository):
         key = await self._convert_key(key)
         prepared_data = await self._convert_data(data)
         result = await self.pool.set(key, prepared_data)
-        await self.pool.expire(key, 60 * 60 * 5)  # 5 hours todo del or think about another timeout
+        await self.pool.expire(key, 60 * 5)
         return result
 
     async def update(self, key: str, data):
