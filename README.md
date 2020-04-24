@@ -48,4 +48,4 @@ Then you can use this handlers for work
 Install test requirements `pip3 install -r test_requirements.txt` and run `python3 -m pytest`
 
 # TODO
-Validation, Tests, some refactor
+Some refactor, add web file storage 
