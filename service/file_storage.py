@@ -57,7 +57,6 @@ class LocalFileStorage(FileStorage):
             f.write(image)
         return full_path
 
-    #  todo think about how to test this func
     async def save_default(self, filename, field):
         async with AIOFile(os.path.join(CONFIG['files_path'], filename), 'wb') as f:
             writer = Writer(f)

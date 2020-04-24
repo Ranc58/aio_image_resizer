@@ -1,5 +1,4 @@
 import shutil
-
 import pytest
 
 from service.file_storage import LocalFileStorage
@@ -12,15 +11,21 @@ b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x84\x00\x00\x00v\x08\x06\x00\x
 @pytest.fixture(scope='session')
 def images_dir(tmpdir_factory):
     image_dir = tmpdir_factory.mktemp('testdir')
-    image_file = image_dir.join('test.png')
-    image_file.write('')
-    with open(image_file, 'wb') as f:
-        f.write(image_bytes)
-    yield str(image_dir)
+    yield image_dir
     shutil.rmtree(str(image_dir))
 
 
 @pytest.fixture(scope='session')
-def local_storage(images_dir):
+def image_in_dir(images_dir):
+    image_file = images_dir.join('test.png')
+    image_file.write('')
+    with open(image_file, 'wb') as f:
+        f.write(image_bytes)
+    print(images_dir)
+    yield str(images_dir)
+
+
+@pytest.fixture(scope='session')
+def local_storage(images_dir, image_in_dir):
     storage = LocalFileStorage(images_path=images_dir)
     return storage

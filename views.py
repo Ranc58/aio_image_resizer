@@ -22,7 +22,7 @@ async def load_image(request):
     field = await reader.next()
     current_timestamp = datetime.datetime.now().timestamp()
     filename = f'{current_timestamp}-{field.filename}'
-    await request.app.file_storage.save_default(filename, field)
+    await request.app.files_storage.save_default(filename, field)
     file_id = str(uuid.uuid4())[:13]
     file_data = ImageData(
         id=file_id,
@@ -74,7 +74,7 @@ async def get_image(request):
             await response.write(line)
     response.force_close()
     try:
-        await request.app.file_storage.delete(file_path)
+        await request.app.files_storage.delete(file_path)
     except ImageNotFoundError as e:
         logger.error(e)
     await request.app.repository.delete(image_id)
