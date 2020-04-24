@@ -44,5 +44,8 @@ Then you can use this handlers for work
 3) `/api/v1/image/<id>` - `GET` request with id from above example.  
     Load resized image.      
 
+# Tests
+Install test requirements `pip3 install -r test_requirements.txt` and run `python3 -m pytest`
+
 # TODO
 Validation, Tests, some refactor
