@@ -37,11 +37,12 @@ async def resize_task(app, file_id):
     )
     if error:
         logger.error(f"{error}")
-        data.update({
-            "status": "error",
-            "updated_file_path": None,
-        })
-    else:
+        if not new_image_path:
+            data.update({
+                "status": "error",
+                "updated_file_path": None,
+            })
+    if new_image_path:
         end_time = time.time()
         end_time_formatted = time.strftime("%H:%M:%S", time.localtime(end_time))
         logger.debug(

@@ -26,13 +26,17 @@ class FileStorage(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def delete_default(self, image_name):
+        raise NotImplementedError
+
+    @abc.abstractmethod
     # async because used in aiohttp handler
     async def save_default(self, filename, field):
         raise NotImplementedError
 
     @abc.abstractmethod
     # async because used in aiohttp handler
-    async def delete(self, image_name):
+    async def delete_result(self, image_name):
         raise NotImplementedError
 
 
@@ -57,6 +61,14 @@ class LocalFileStorage(FileStorage):
             f.write(image)
         return full_path
 
+    def delete_default(self, image_name):
+        if not os.path.exists(self.images_path):
+            raise PathNotFoundError(f"Not found {self.images_path}")
+        full_path = os.path.join(self.images_path, image_name)
+        if not os.path.exists(full_path):
+            raise ImageNotFoundError(f"Not found {full_path}")
+        os.remove(os.path.join(self.images_path, image_name))
+
     async def save_default(self, filename, field):
         async with AIOFile(os.path.join(CONFIG['files_path'], filename), 'wb') as f:
             writer = Writer(f)
@@ -67,7 +79,7 @@ class LocalFileStorage(FileStorage):
                 await writer(chunk)
             await f.fsync()
 
-    async def delete(self, image_name):
+    async def delete_result(self, image_name):
         full_path = os.path.join(self.images_path, image_name)
         if not os.path.exists(full_path):
             raise ImageNotFoundError(f"Not found {full_path}")

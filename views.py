@@ -18,6 +18,7 @@ logger = logging.getLogger('app_logger')
 
 @request_schema(ImageSchema(), locations=['query'])
 async def load_image(request):
+    # todo think about validate file
     reader = await request.multipart()
     field = await reader.next()
     current_timestamp = datetime.datetime.now().timestamp()
@@ -74,7 +75,7 @@ async def get_image(request):
             await response.write(line)
     response.force_close()
     try:
-        await request.app.files_storage.delete(file_path)
+        await request.app.files_storage.delete_result(file_path)
     except ImageNotFoundError as e:
         logger.error(e)
     await request.app.repository.delete(image_id)

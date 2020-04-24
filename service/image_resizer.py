@@ -27,14 +27,20 @@ class ImageResizer:
         return image
 
     def _save_image(self, image):
-        format = self.image_name.split('.')[-1:][0].upper()
+        format_image = self.image_name.split('.')[-1:][0].upper()
         bytes_data = io.BytesIO()
-        image.save(bytes_data, format=format)
-        saved = self.file_storage.save_result(bytes_data.getvalue(), self.image_name)
+        image.save(bytes_data, format=format_image)
+        try:
+            saved = self.file_storage.save_result(bytes_data.getvalue(), self.image_name)
+        except PathNotFoundError:
+            raise
         return saved
 
     def _delete_default_image(self):
-        self.file_storage.delete(self.image_name)
+        try:
+            self.file_storage.delete_default(self.image_name)
+        except (PathNotFoundError, ImageNotFoundError):
+            raise
 
     def _resize_image(self, image):
         new_width = self.width
@@ -58,9 +64,17 @@ class ImageResizer:
         except ImageNotFoundError as e:
             return None, str(e)
         image_after_update = self._resize_image(image_before_update)
-        self._delete_default_image()
+        try:
+            self._delete_default_image()
+        except (PathNotFoundError, ImageNotFoundError) as e:
+            # not return because we can clear files later (by cron for example)
+            error = f"Delete default img err: {e}"
         try:
             saved = self._save_image(image_after_update)
         except PathNotFoundError as e:
-            return None, str(e)
+            if error:
+                error = f"{error}; Save new img err: {e}"
+            else:
+                error = f"Save new img err: {e}"
+            return None, str(error)
         return saved, error
