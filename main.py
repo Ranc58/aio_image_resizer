@@ -103,6 +103,8 @@ if __name__ == '__main__':
     with suppress(KeyboardInterrupt):
         handler = logging.StreamHandler()
         logger.addHandler(handler)
+        formatter = logging.Formatter('%(asctime)s  %(levelname)s: %(message)s')
+        handler.setFormatter(formatter)
         if CONFIG.get('debug'):
             logger.setLevel(logging.DEBUG)
         app = web.Application()
