@@ -1,10 +1,7 @@
-import asyncio
 import logging
-import os
 import uuid
 import datetime
 
-from aiofile import AIOFile, Writer, LineReader
 from aiohttp import web
 from aiohttp_apispec import request_schema
 
@@ -41,8 +38,6 @@ async def load_image(request):
 
 async def check_status(request):
     image_id = request.match_info.get('image_id')
-    if not image_id:
-        raise web.HTTPBadRequest
     file_data = await request.app.repository.get(image_id)
     if not file_data:
         raise web.HTTPNotFound()
@@ -55,8 +50,6 @@ async def check_status(request):
 
 async def get_image(request):
     image_id = request.match_info.get('image_id')
-    if not image_id:
-        raise web.HTTPBadRequest
     file_data = await request.app.repository.get(image_id)
     if not file_data:
         raise web.HTTPNotFound()
@@ -70,9 +63,7 @@ async def get_image(request):
     response.headers['Content-Disposition'] = f'attachment; filename="{file_data.get("file_name")}"'
     await response.prepare(request)
     file_path = file_data.get('updated_file_path')
-    async with AIOFile(file_path, 'rb') as f:
-        async for line in LineReader(f):
-            await response.write(line)
+    await request.app.files_storage.get_result(file_path, response)
     response.force_close()
     try:
         await request.app.files_storage.delete_result(file_path)

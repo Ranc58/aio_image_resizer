@@ -4,7 +4,7 @@ import funcy
 import pytest
 
 from service.file_storage import ImageNotFoundError, PathNotFoundError
-from service.tests.conftest import IMAGE_BYTES
+from tests.service.conftest import IMAGE_BYTES, TEST_FILE_NAME
 
 
 class MockMultipartReader:
@@ -18,6 +18,14 @@ class MockMultipartReader:
         chunk = self.image_b[0]
         self.image_b = self.image_b[1:]
         return chunk
+
+    async def next(self):
+
+        class Field:
+            def __init__(self):
+                self.filename = TEST_FILE_NAME
+
+        return Field()
 
 
 def test_get_image(local_storage):

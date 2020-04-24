@@ -1,7 +1,7 @@
 import abc
 import os
 
-from aiofile import Writer, AIOFile
+from aiofile import Writer, AIOFile, LineReader
 from aiofiles.os import remove
 
 from config import CONFIG
@@ -37,6 +37,11 @@ class FileStorage(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     # async because used in aiohttp handler
     async def delete_result(self, image_name):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    # async because used in aiohttp handler
+    async def get_result(self, file_path, response):
         raise NotImplementedError
 
 
@@ -84,3 +89,8 @@ class LocalFileStorage(FileStorage):
         if not os.path.exists(full_path):
             raise ImageNotFoundError(f"Not found {full_path}")
         await remove(full_path)
+
+    async def get_result(self, file_path, response):
+        async with AIOFile(file_path, 'rb') as f:
+            async for line in LineReader(f):
+                await response.write(line)

@@ -6,7 +6,7 @@ from PIL import Image
 
 from service import ImageResizer, LocalFileStorage
 from service.file_storage import ImageNotFoundError, PathNotFoundError
-from service.tests.conftest import TEST_FILE_NAME, IMAGE_BYTES
+from tests.service.conftest import TEST_FILE_NAME, IMAGE_BYTES
 
 
 @pytest.fixture(scope='module')
@@ -64,7 +64,7 @@ def test_delete_default_image_exception_image_not_found(image_resizer, monkeypat
         image_resizer._delete_default_image()
 
 
-def test_delete_default_image_exception_path_not_found(image_resizer,local_storage, monkeypatch):
+def test_delete_default_image_exception_path_not_found(image_resizer, local_storage, monkeypatch):
     monkeypatch.setattr(local_storage, "images_path", "/test/")
     with pytest.raises(PathNotFoundError):
         image_resizer._delete_default_image()
@@ -114,7 +114,8 @@ def test_resize_image_exception_default_image_not_found(image_resizer, local_sto
     assert err == f"Not found {os.path.join(local_storage.images_path, file_name)}"
 
 
-def test_resize_image_exception_not_found_delete_not_found_save(image_resizer, pillow_image, local_storage, monkeypatch, mocker):
+def test_resize_image_exception_not_found_delete_not_found_save(image_resizer, pillow_image, local_storage, monkeypatch,
+                                                                mocker):
     mocker.patch.object(ImageResizer, '_get_image', return_value=pillow_image)
     monkeypatch.setattr(local_storage, "images_path", "/test/")
     result, err = image_resizer.resize_img(TEST_FILE_NAME, 10, None, None)
@@ -122,7 +123,8 @@ def test_resize_image_exception_not_found_delete_not_found_save(image_resizer, p
     assert err == f"Delete default img err: Not found /test/; Save new img err: Not found /test/"
 
 
-def test_resize_image_exception_not_found_delete(image_resizer, pillow_image, images_dir, local_storage, monkeypatch, mocker):
+def test_resize_image_exception_not_found_delete(image_resizer, pillow_image, images_dir, local_storage, monkeypatch,
+                                                 mocker):
     success_path = f"{images_dir}/resized_{TEST_FILE_NAME}"
     mocker.patch.object(ImageResizer, '_get_image', return_value=pillow_image)
     mocker.patch.object(ImageResizer, '_save_image', return_value=success_path)
@@ -131,8 +133,8 @@ def test_resize_image_exception_not_found_delete(image_resizer, pillow_image, im
     assert result == success_path
     assert err == f"Delete default img err: Not found /test/"
 
-def test_resize_image_exception_not_found_save(image_resizer, pillow_image, images_dir, local_storage, monkeypatch, mocker):
-    success_path = f"{images_dir}/resized_{TEST_FILE_NAME}"
+
+def test_resize_image_exception_not_found_save(image_resizer, pillow_image, local_storage, monkeypatch, mocker):
     mocker.patch.object(ImageResizer, '_get_image', return_value=pillow_image)
     mocker.patch.object(ImageResizer, '_delete_default_image', return_value=None)
     monkeypatch.setattr(local_storage, "images_path", "/test/")

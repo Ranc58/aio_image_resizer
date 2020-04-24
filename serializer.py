@@ -15,8 +15,12 @@ class ImageSchema(Schema):
 
     @validates_schema
     def validates_schema(self, data, **kwargs):
-        if ((data.get("width") and data.get("scale")) or
-                (data.get("height") and data.get("scale"))):
-            err_msg = 'Please select correct arguments combination: 1)scale 2)height 3)width 4)height and width'
-            raise ValidationError(err_msg)
-
+        err_msg = 'Please select correct arguments combination: 1)scale 2)height 3)width 4)height and width'
+        width = data.get("width")
+        scale = data.get("scale")
+        height = data.get("height")
+        if not any([width, scale, height]):
+            raise ValidationError(err_msg, field_name="error")
+        if ((width and scale) or
+                (height and scale)):
+            raise ValidationError(err_msg, field_name="error")
