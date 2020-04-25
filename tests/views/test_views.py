@@ -8,6 +8,7 @@ from aiohttp import web
 from aiohttp.web_request import Request
 from aiohttp_apispec import setup_aiohttp_apispec, validation_middleware
 
+from config import CONFIG
 from service.file_storage import ImageNotFoundError
 from tests.service.conftest import TEST_FILE_NAME, IMAGE_BYTES
 from tests.service.test_file_storage import MockMultipartReader
@@ -168,7 +169,7 @@ async def test_get_image(aio_client, image_in_dir, mocker):
     assert resp.status == 200
     assert buffer == IMAGE_BYTES
 
-async def test_get_image_delete_error(aio_client, image_in_dir, mocker):
+async def test_get_image_delete_error(aio_client, image_in_dir, mocker, monkeypatch):
     image_id = "01ec3385-47"
     url = f"/api/v1/image/{image_id}"
     status_data = {
@@ -177,6 +178,7 @@ async def test_get_image_delete_error(aio_client, image_in_dir, mocker):
         'updated_file_path': os.path.join(image_in_dir, TEST_FILE_NAME),
         'file_name': TEST_FILE_NAME,
     }
+    monkeypatch.setitem(CONFIG, 'clear', True)
     mocker.patch.object(MockRepo, "get", return_value=status_data)
     resp = await aio_client.get(url)
     buffer = b""

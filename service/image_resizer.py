@@ -20,7 +20,7 @@ class ImageResizer:
 
     def _get_image(self):
         try:
-            image_data = self.file_storage.get(self.image_name)
+            image_data = self.file_storage.get_default(self.image_name)
         except ImageNotFoundError:
             raise
         image = Image.open(io.BytesIO(image_data))

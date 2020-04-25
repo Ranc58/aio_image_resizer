@@ -23,7 +23,7 @@ def pillow_image():
 
 
 def test__get_image(image_resizer, mocker):
-    mocker.patch.object(LocalFileStorage, 'get', return_value=IMAGE_BYTES)
+    mocker.patch.object(LocalFileStorage, 'get_default', return_value=IMAGE_BYTES)
     result = image_resizer._get_image()
     assert result == Image.open(io.BytesIO(IMAGE_BYTES))
 
@@ -64,12 +64,6 @@ def test_delete_default_image_exception_image_not_found(image_resizer, monkeypat
         image_resizer._delete_default_image()
 
 
-def test_delete_default_image_exception_path_not_found(image_resizer, local_storage, monkeypatch):
-    monkeypatch.setattr(local_storage, "images_path", "/test/")
-    with pytest.raises(PathNotFoundError):
-        image_resizer._delete_default_image()
-
-
 def test_resize_image_width_height(image_resizer, monkeypatch, pillow_image):
     monkeypatch.setattr(image_resizer, "width", 4)
     monkeypatch.setattr(image_resizer, "height", 5)
@@ -100,7 +94,7 @@ def test_resize_image_scale(image_resizer, monkeypatch, pillow_image):
 
 
 def test_resize_image(image_resizer, images_dir, mocker):
-    mocker.patch.object(LocalFileStorage, 'get', return_value=IMAGE_BYTES)
+    mocker.patch.object(LocalFileStorage, 'get_default', return_value=IMAGE_BYTES)
     resized_path = f"{images_dir}/resized_{TEST_FILE_NAME}"
     result, err = image_resizer.resize_img(TEST_FILE_NAME, 10, None, None)
     assert not err

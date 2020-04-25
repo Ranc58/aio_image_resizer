@@ -1,8 +1,9 @@
 # Image resizer
 
 Image resizer api. Based on aiohttp/redis/multiprocessing.
-Resize work running on different processes, work status stored in redis.
+Resize work running on different processes, work status stored in redis, resized images - on localhost or Amazon S3.
 Written for fun.
+
 
 
 # How to install
@@ -15,10 +16,22 @@ Python version required: 3.7+
    `pip3 install -r requirements.txt` (alternatively try add `sudo` before command)
    
 3. You need redis. Add to your environ `REDIS_HOST`(default-`localhost`), 
-`REDIS_PORT`(default-`6379`), `REDIS_PASS`(default-`SetPass`) .
+   `REDIS_PORT`(default-`6379`), `REDIS_PASS`(default-`SetPass`).\ 
+   And you can set expiration time for redis: `REDIS_TIMEOUT` (default-stored indefinitely or until resized image is deleted).
 
 4. If it need - add to environ path to files dir `TEMP_FILES_PATH` (default - project root)
 
+5. By default resized images stored forever. If you want you can set `FILES_CLEAR` for delete resized image after sending to client.
+
+6. By default files stored on localhost. If you want user Amazon S3 you need set additional ENV vars:
+   - `AWS_BUCKET` - name of your bucket.
+   - `AWS_FOLDER` - folder for resized images.
+   - `AWS_ACCESS_KEY`
+   - `AWS_SECRET_ACCESS`
+   - `AWS_REGION` - your aws region (for example `eu-central-1`)
+   - `AWS_CLEAR` - delete resized images from AWS after sending to client (default-False)
+   - `AWS_SSL` - use or not SSL for connections to AWS (default-False)
+   
 5. For debug set something to `DEBUG` env.
 
 # How to run
@@ -48,4 +61,4 @@ Then you can use this handlers for work
 Install test requirements `pip3 install -r test_requirements.txt` and run `python3 -m pytest`
 
 # TODO
-Some refactor, add web file storage 
+Some refactor, add errors handling for AWS connections.

@@ -9,7 +9,7 @@ from aiohttp import web
 from aiohttp_apispec import validation_middleware, setup_aiohttp_apispec
 
 from config import CONFIG
-from service import LocalFileStorage, ImageResizer, RedisRepository
+from service import LocalFileStorage, AmazonFileStorage, ImageResizer, RedisRepository
 from views import load_image, get_image, check_status
 
 logger = logging.getLogger('app_logger')
@@ -74,7 +74,16 @@ async def repository_process(app):
 
 
 async def files_storage_process(app):
-    files_storage = LocalFileStorage(CONFIG['files_path'])
+    if CONFIG['file_storage_type'] == 'aws':
+        files_storage = AmazonFileStorage(
+            images_path=CONFIG['files_path'],
+            bucket=CONFIG['amazon'].get("bucket"),
+            folder=CONFIG['amazon'].get("folder"),
+        )
+    else:
+        files_storage = LocalFileStorage(
+            CONFIG['files_path']
+        )
     app.files_storage = files_storage
     logger.info("Files storage started")
     yield

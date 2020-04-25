@@ -44,6 +44,7 @@ class RedisRepository(Repository):
 
     def __init__(self):
         self.pool = None
+        self.save_timeout = CONFIG['redis'].get('timeout')
 
     async def connect(self):
         while not self.pool:
@@ -78,7 +79,8 @@ class RedisRepository(Repository):
         key = await self._convert_key(key)
         prepared_data = await self._convert_data(data)
         result = await self.pool.set(key, prepared_data)
-        await self.pool.expire(key, 60 * 5)
+        if self.save_timeout:
+            await self.pool.expire(key, 60 * self.save_timeout)
         return result
 
     async def update(self, key: str, data):

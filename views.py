@@ -65,9 +65,10 @@ async def get_image(request):
     file_path = file_data.get('updated_file_path')
     await request.app.files_storage.get_result(file_path, response)
     response.force_close()
-    try:
-        await request.app.files_storage.delete_result(file_path)
-    except ImageNotFoundError as e:
-        logger.error(e)
-    await request.app.repository.delete(image_id)
+    if CONFIG.get('clear'):
+        try:
+            await request.app.files_storage.delete_result(file_path)
+        except ImageNotFoundError as e:
+            logger.error(e)
+        await request.app.repository.delete(image_id)
     return response
