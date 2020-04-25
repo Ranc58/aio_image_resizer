@@ -100,10 +100,10 @@ class LocalFileStorage(FileStorage):
 
 class AmazonFileStorage(FileStorage):
 
-    def __init__(self, images_path, bucket, folder):
+    def __init__(self, images_path):
         self.images_path = images_path
-        self.bucket = bucket
-        self.folder = folder
+        self.bucket = CONFIG['amazon'].get("bucket"),
+        self.folder = CONFIG['amazon'].get("folder"),
 
     def _get_client(self, sync=False):
         if sync:

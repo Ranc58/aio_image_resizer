@@ -77,12 +77,10 @@ async def files_storage_process(app):
     if CONFIG['file_storage_type'] == 'aws':
         files_storage = AmazonFileStorage(
             images_path=CONFIG['files_path'],
-            bucket=CONFIG['amazon'].get("bucket"),
-            folder=CONFIG['amazon'].get("folder"),
         )
     else:
         files_storage = LocalFileStorage(
-            CONFIG['files_path']
+            images_path=CONFIG['files_path']
         )
     app.files_storage = files_storage
     logger.info("Files storage started")

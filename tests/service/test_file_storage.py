@@ -21,8 +21,6 @@ def aws_image_in_dir(images_dir):
 def aws_storage(images_dir, aws_image_in_dir):
     storage = AmazonFileStorage(
         images_path=images_dir,
-        bucket="test",
-        folder="test",
     )
     return storage
 
