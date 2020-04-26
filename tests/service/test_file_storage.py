@@ -2,8 +2,9 @@ import os
 
 import funcy
 import pytest
+from botocore.exceptions import EndpointConnectionError
 
-from service.file_storage import ImageNotFoundError, PathNotFoundError, AmazonFileStorage
+from service.file_storage import ImageNotFoundError, PathNotFoundError, AmazonFileStorage, ConnectionStorageError
 from tests.service.conftest import IMAGE_BYTES, TEST_FILE_NAME
 
 AWS_TEST_FILE_NAME = f"AWS_{TEST_FILE_NAME}"
@@ -45,38 +46,38 @@ class MockMultipartReader:
 
         return Field()
 
+class SyncConn:
+
+    def put_object(self, *args, **kwargs):
+        pass
+
+class AsyncConn:
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    async def delete_object(self, *args, **kwargs):
+        pass
+
+    async def get_object(self, *args, **kwargs):
+        class Stream:
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def read(self):
+                return IMAGE_BYTES
+
+        return {"Body": Stream}
 
 
 def mock_get_client(sync=False):
-    class SyncConn:
-
-        def put_object(self, *args, **kwargs):
-            pass
-
-    class AsyncConn:
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
-            pass
-
-        async def delete_object(self, *args, **kwargs):
-            pass
-
-        async def get_object(self, *args, **kwargs):
-            class Stream:
-
-                async def __aenter__(self):
-                    return self
-
-                async def __aexit__(self, exc_type, exc_val, exc_tb):
-                    pass
-
-                async def read(self):
-                    return IMAGE_BYTES
-
-            return {"Body": Stream}
 
     if sync:
         return SyncConn()
@@ -180,17 +181,17 @@ class TestAmazonFileStorage:
         result_path = aws_storage.save_result(image, image_name)
         assert result_path == f"{aws_storage.folder}/resized_{image_name}"
 
-    @pytest.mark.skip("Add errors handling for AWS storage")
-    def test_save_result_image_exception(self, aws_storage, monkeypatch, mocker):
+    def test_save_result_image_exception_connection_storage_error(self, aws_storage, monkeypatch, mocker):
         image_name = "test.png"
         image = IMAGE_BYTES
         full_image_path = "/test/"
         mocker.patch.object(AmazonFileStorage, '_get_client', return_value=mock_get_client(sync=True))
+        mocker.patch.object(SyncConn, 'put_object', side_effect=ConnectionError)
         monkeypatch.setattr(aws_storage, "images_path", full_image_path)
-        with pytest.raises(PathNotFoundError) as exc:
+        with pytest.raises(ConnectionStorageError) as exc:
             aws_storage.save_result(image, image_name)
         exception_msg = exc.value.args[0]
-        excepted_msg = f"Not found {full_image_path}"
+        excepted_msg = f"Connection error for AWS: "
         assert exception_msg == excepted_msg
 
     def test_delete_image(self, aws_storage):
@@ -224,13 +225,13 @@ class TestAmazonFileStorage:
         image_file.write('')
         await aws_storage.delete_result(image_name)
 
-    @pytest.mark.skip("Add errors handling for aws")
     @pytest.mark.asyncio
     async def test_delete_result_image_exception(self, aws_storage, mocker):
         mocker.patch.object(AmazonFileStorage, '_get_client', return_value=mock_get_client())
         image_name = "test_not_exist.png"
-        with pytest.raises(ImageNotFoundError) as exc:
+        mocker.patch.object(AsyncConn, 'delete_object', side_effect=ConnectionError)
+        with pytest.raises(ConnectionStorageError) as exc:
             await aws_storage.delete_result(image_name)
         exception_msg = exc.value.args[0]
-        excepted_msg = f"Not found {os.path.join(aws_storage.images_path, image_name)}"
+        excepted_msg = "Connection error for AWS: "
         assert exception_msg == excepted_msg

@@ -1,15 +1,14 @@
 import abc
 import os
-from typing import Union
 
 import aiobotocore
 import botocore.session
-from aiobotocore import AioSession
 from aiofile import Writer, AIOFile, LineReader
 from aiofiles.os import remove
 from aiohttp import BodyPartReader
 from aiohttp.web import StreamResponse
 from botocore.client import BaseClient
+from botocore.exceptions import EndpointConnectionError, ClientError
 
 from config import CONFIG
 
@@ -19,6 +18,10 @@ class ImageNotFoundError(BaseException):
 
 
 class PathNotFoundError(BaseException):
+    pass
+
+
+class ConnectionStorageError(BaseException):
     pass
 
 
@@ -97,9 +100,13 @@ class LocalFileStorage(FileStorage):
         await remove(file_path)
 
     async def write_result(self, file_path: str, response: StreamResponse) -> None:
-        async with AIOFile(file_path, 'rb') as f:
-            async for line in LineReader(f):
-                await response.write(line)
+        try:
+            async with AIOFile(file_path, 'rb') as f:
+                async for line in LineReader(f):
+                    await response.write(line)
+        except FileNotFoundError:
+            raise PathNotFoundError(f"Not found {self.images_path}")
+
 
 
 class AmazonFileStorage(FileStorage):
@@ -134,11 +141,18 @@ class AmazonFileStorage(FileStorage):
     def save_result(self, image: bytes, image_name: str) -> str:
         key = f'{self.folder}/resized_{image_name}'
         client = self._get_client(sync=True)
-        client.put_object(
-            Bucket=self.bucket,
-            Key=key,
-            Body=image,
-        )
+        try:
+            client.put_object(
+                Bucket=self.bucket,
+                Key=key,
+                Body=image,
+            )
+        except (
+                EndpointConnectionError,
+                ConnectionError,
+                ClientError,
+        ) as e:
+            raise ConnectionStorageError(f"Connection error for AWS: {e}")
         return key
 
     def delete_default(self, image_name: str) -> None:
@@ -161,12 +175,26 @@ class AmazonFileStorage(FileStorage):
 
     async def delete_result(self, file_path: str) -> None:
         async with self._get_client() as client:
-            await client.delete_object(Bucket=self.bucket, Key=file_path)
+            try:
+                await client.delete_object(Bucket=self.bucket, Key=file_path)
+            except (
+                EndpointConnectionError,
+                ConnectionError,
+                ClientError,
+            ) as e:
+                raise ConnectionStorageError(f"Connection error for AWS: {e}")
 
     async def write_result(self, file_path: str, response: StreamResponse) -> None:
         key = file_path
         async with self._get_client() as client:
-            response_aws = await client.get_object(Bucket=self.bucket, Key=key)
+            try:
+                response_aws = await client.get_object(Bucket=self.bucket, Key=key)
+            except (
+                EndpointConnectionError,
+                ConnectionError,
+                ClientError,
+            ) as e:
+                raise ConnectionStorageError(f"Connection error for AWS: {e}")
             async with response_aws['Body'] as stream:
                 body = await stream.read()
                 await response.write(body)

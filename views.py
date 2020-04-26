@@ -10,7 +10,7 @@ from aiohttp_apispec import request_schema
 from serializer import ImageSchema
 from models.Image import ImageData
 from config import CONFIG
-from service.file_storage import ImageNotFoundError
+from service.file_storage import ImageNotFoundError, ConnectionStorageError, PathNotFoundError
 
 logger = logging.getLogger('app_logger')
 
@@ -65,7 +65,12 @@ async def get_image(request: Request) -> StreamResponse:
     response.headers['Content-Disposition'] = f'attachment; filename="{file_data.get("file_name")}"'
     await response.prepare(request)
     file_path = file_data.get('updated_file_path')
-    await request.app.files_storage.write_result(file_path, response)
+    try:
+        await request.app.files_storage.write_result(file_path, response)
+    except (ConnectionStorageError, PathNotFoundError) as e:
+        logger.error(e)
+        response.force_close()
+        return response
     response.force_close()
     if CONFIG.get('clear'):
         try:

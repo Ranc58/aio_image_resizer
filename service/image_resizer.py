@@ -3,7 +3,8 @@ from typing import Callable, Union, Any, Optional, Tuple
 
 from PIL import Image
 
-from service.file_storage import ImageNotFoundError, PathNotFoundError, AmazonFileStorage, LocalFileStorage
+from service.file_storage import ImageNotFoundError, PathNotFoundError, AmazonFileStorage, LocalFileStorage, \
+    ConnectionStorageError
 
 
 class ImageResizerError(BaseException):
@@ -78,7 +79,10 @@ class ImageResizer:
             error = f"Delete default img err: {e}"
         try:
             saved = self._save_image(image_after_update)
-        except PathNotFoundError as e:
+        except (
+                PathNotFoundError,
+                ConnectionStorageError,
+        ) as e:
             if error:
                 error = f"{error}; Save new img err: {e}"
             else:

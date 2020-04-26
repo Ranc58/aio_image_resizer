@@ -9,7 +9,7 @@ from aiohttp.web_request import Request
 from aiohttp_apispec import setup_aiohttp_apispec, validation_middleware
 
 from config import CONFIG
-from service.file_storage import ImageNotFoundError
+from service.file_storage import ImageNotFoundError, PathNotFoundError
 from tests.service.conftest import TEST_FILE_NAME, IMAGE_BYTES
 from tests.service.test_file_storage import MockMultipartReader
 from views import load_image, get_image, check_status
@@ -168,6 +168,27 @@ async def test_get_image(aio_client, image_in_dir, mocker):
         buffer += data
     assert resp.status == 200
     assert buffer == IMAGE_BYTES
+
+
+async def test_get_image_path_not_found_error(aio_client, image_in_dir, mocker):
+    image_id = "01ec3385-47"
+    url = f"/api/v1/image/{image_id}"
+    status_data = {
+        'id': image_id,
+        'status': "done",
+        'updated_file_path': os.path.join(image_in_dir, TEST_FILE_NAME),
+        'file_name': TEST_FILE_NAME,
+    }
+    mocker.patch.object(MockRepo, "get", return_value=status_data)
+    mocker.patch.object(MockFilesStorage, "delete_result", return_value=None)
+    mocker.patch.object(MockFilesStorage, "write_result", side_effect=PathNotFoundError)
+    resp = await aio_client.get(url)
+    buffer = b""
+    async for data, _ in resp.content.iter_chunks():
+        buffer += data
+    assert resp.status == 200
+    assert buffer == b''
+
 
 async def test_get_image_delete_error(aio_client, image_in_dir, mocker, monkeypatch):
     image_id = "01ec3385-47"
