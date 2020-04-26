@@ -23,7 +23,7 @@ Python version required: 3.7+
 
 5. By default resized images stored forever. If you want you can set `FILES_CLEAR` for delete resized image after sending to client.
 
-6. By default files stored on localhost. If you want user Amazon S3 you need set additional ENV vars:
+6. By default files stored on localhost. If you want user Amazon S3 you need set env `STORAGE_TYPE` to `aws` and additional ENV vars:
    - `AWS_BUCKET` - name of your bucket.
    - `AWS_FOLDER` - folder for resized images.
    - `AWS_ACCESS_KEY`

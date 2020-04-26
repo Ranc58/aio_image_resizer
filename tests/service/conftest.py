@@ -1,4 +1,3 @@
-import shutil
 import pytest
 
 from service.file_storage import LocalFileStorage

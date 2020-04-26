@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Dict
 
 
 @dataclass
@@ -12,5 +13,5 @@ class ImageData:
     scale: int
     updated_file_path: str = None
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return self.__dict__

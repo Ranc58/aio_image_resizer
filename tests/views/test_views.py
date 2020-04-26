@@ -20,7 +20,7 @@ class MockFilesStorage:
     async def save_default(self, *args, **kwargs):
         pass
 
-    async def get_result(self, file_path, response):
+    async def write_result(self, file_path, response):
         async with AIOFile(file_path, 'rb') as f:
             async for line in LineReader(f):
                 await response.write(line)

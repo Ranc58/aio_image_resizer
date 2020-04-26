@@ -142,18 +142,20 @@ class TestLocalFileStorage:
     async def test_delete_result(self, local_storage, images_dir):
         image_name = "new.png"
         image_file = images_dir.join(image_name)
-        image_file.write('')
-        await local_storage.delete_result(image_name)
+        image_file.write(b'')
+        full_path = os.path.join(images_dir, image_name)
+        await local_storage.delete_result(full_path)
         full_image_path = os.path.join(local_storage.images_path, image_name)
         assert not os.path.exists(full_image_path)
 
     @pytest.mark.asyncio
     async def test_delete_result_image_exception(self, local_storage):
         image_name = "test_not_exist.png"
+        full_path = os.path.join(local_storage.images_path, image_name)
         with pytest.raises(ImageNotFoundError) as exc:
-            await local_storage.delete_result(image_name)
+            await local_storage.delete_result(full_path)
         exception_msg = exc.value.args[0]
-        excepted_msg = f"Not found {os.path.join(local_storage.images_path, image_name)}"
+        excepted_msg = f"Not found {full_path}"
         assert exception_msg == excepted_msg
 
 

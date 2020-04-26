@@ -1,8 +1,9 @@
 import io
+from typing import Callable, Union, Any, Optional, Tuple
 
 from PIL import Image
 
-from service.file_storage import ImageNotFoundError, PathNotFoundError
+from service.file_storage import ImageNotFoundError, PathNotFoundError, AmazonFileStorage, LocalFileStorage
 
 
 class ImageResizerError(BaseException):
@@ -11,14 +12,14 @@ class ImageResizerError(BaseException):
 
 class ImageResizer:
 
-    def __init__(self, file_storage):
+    def __init__(self, file_storage: Union[AmazonFileStorage, LocalFileStorage]) -> None:
         self.file_storage = file_storage
         self.image_name = None
         self.width = None
         self.height = None
         self.scale = None
 
-    def _get_image(self):
+    def _get_image(self) -> Image.Image:
         try:
             image_data = self.file_storage.get_default(self.image_name)
         except ImageNotFoundError:
@@ -26,7 +27,7 @@ class ImageResizer:
         image = Image.open(io.BytesIO(image_data))
         return image
 
-    def _save_image(self, image):
+    def _save_image(self, image: Image.Image) -> str:
         format_image = self.image_name.split('.')[-1:][0].upper()
         bytes_data = io.BytesIO()
         image.save(bytes_data, format=format_image)
@@ -36,13 +37,13 @@ class ImageResizer:
             raise
         return saved
 
-    def _delete_default_image(self):
+    def _delete_default_image(self) -> None:
         try:
             self.file_storage.delete_default(self.image_name)
         except (PathNotFoundError, ImageNotFoundError):
             raise
 
-    def _resize_image(self, image):
+    def _resize_image(self, image: Image.Image) -> Image.Image:
         new_width = self.width
         new_height = self.height
         if self.width and self.height:
@@ -56,7 +57,13 @@ class ImageResizer:
             new_height = int(image.size[1] / self.scale)
         return image.resize((new_width, new_height))
 
-    def resize_img(self, image_name, width, height, scale):
+    def resize_img(
+            self,
+            image_name: str,
+            width: Union[str, int],
+            height: Union[str, int],
+            scale: Union[str, int]
+    ) -> Tuple[Optional[str], Optional[str]]:
         self.image_name, self.width, self.height, self.scale = image_name, width, height, scale
         error = None
         try:

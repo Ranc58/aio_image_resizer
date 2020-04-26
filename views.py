@@ -3,6 +3,8 @@ import uuid
 import datetime
 
 from aiohttp import web
+from aiohttp.web_request import Request
+from aiohttp.web_response import json_response, StreamResponse
 from aiohttp_apispec import request_schema
 
 from serializer import ImageSchema
@@ -14,7 +16,7 @@ logger = logging.getLogger('app_logger')
 
 
 @request_schema(ImageSchema(), locations=['query'])
-async def load_image(request):
+async def load_image(request: Request) -> json_response:
     # todo think about validate file
     reader = await request.multipart()
     field = await reader.next()
@@ -36,7 +38,7 @@ async def load_image(request):
     return web.json_response(data={"id": file_id, "status": "loaded"}, status=201)
 
 
-async def check_status(request):
+async def check_status(request: Request) -> json_response:
     image_id = request.match_info.get('image_id')
     file_data = await request.app.repository.get(image_id)
     if not file_data:
@@ -48,7 +50,7 @@ async def check_status(request):
     return web.json_response(data=data, status=200)
 
 
-async def get_image(request):
+async def get_image(request: Request) -> StreamResponse:
     image_id = request.match_info.get('image_id')
     file_data = await request.app.repository.get(image_id)
     if not file_data:
@@ -63,7 +65,7 @@ async def get_image(request):
     response.headers['Content-Disposition'] = f'attachment; filename="{file_data.get("file_name")}"'
     await response.prepare(request)
     file_path = file_data.get('updated_file_path')
-    await request.app.files_storage.get_result(file_path, response)
+    await request.app.files_storage.write_result(file_path, response)
     response.force_close()
     if CONFIG.get('clear'):
         try:

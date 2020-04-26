@@ -6,6 +6,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from contextlib import suppress
 
 from aiohttp import web
+from aiohttp.web_app import Application
 from aiohttp_apispec import validation_middleware, setup_aiohttp_apispec
 
 from config import CONFIG
@@ -15,11 +16,11 @@ from views import load_image, get_image, check_status
 logger = logging.getLogger('app_logger')
 
 
-def register_signal_handler():
+def register_signal_handler() -> None:
     signal.signal(signal.SIGINT, lambda _, __: None)
 
 
-async def resize_task(app, file_id):
+async def resize_task(app: Application, file_id: str) -> None:
     loop = asyncio.get_event_loop()
     data = await app.repository.get(file_id)
     image_resizer = ImageResizer(app.files_storage)
@@ -54,7 +55,7 @@ async def resize_task(app, file_id):
     await app.repository.update(file_id, data)
 
 
-async def input_queue_listener(app):
+async def input_queue_listener(app: Application) -> None:
     logger.debug('listen input data..')
     loop = asyncio.get_event_loop()
     while True:
@@ -63,7 +64,7 @@ async def input_queue_listener(app):
         app.input_images_queue.task_done()
 
 
-async def repository_process(app):
+async def repository_process(app: Application) -> None:
     repository = RedisRepository()
     await repository.connect()
     app.repository = repository
@@ -73,7 +74,7 @@ async def repository_process(app):
     logger.info("Repository stopped")
 
 
-async def files_storage_process(app):
+async def files_storage_process(app: Application) -> None:
     if CONFIG['file_storage_type'] == 'aws':
         files_storage = AmazonFileStorage(
             images_path=CONFIG['files_path'],
@@ -88,7 +89,7 @@ async def files_storage_process(app):
     logger.info("Files storage stopped")
 
 
-async def queue_listener_process(app):
+async def queue_listener_process(app: Application) -> None:
     input_images_queue = asyncio.Queue()
     app.input_images_queue = input_images_queue
     process_pool = ProcessPoolExecutor(
