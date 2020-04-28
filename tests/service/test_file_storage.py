@@ -2,7 +2,6 @@ import os
 
 import funcy
 import pytest
-from botocore.exceptions import EndpointConnectionError
 
 from service.file_storage import ImageNotFoundError, PathNotFoundError, AmazonFileStorage, ConnectionStorageError
 from tests.service.conftest import IMAGE_BYTES, TEST_FILE_NAME
@@ -26,30 +25,25 @@ def aws_storage(images_dir, aws_image_in_dir):
     return storage
 
 
-
-class MockMultipartReader:
+class MockAdapter:
 
     def __init__(self):
         self.image_b = list(funcy.chunks(10000, IMAGE_BYTES))
 
-    async def read_chunk(self):
-        if not self.image_b:
-            return
-        chunk = self.image_b[0]
-        self.image_b = self.image_b[1:]
-        return chunk
+    async def read(self):
+        while True:
+            if not self.image_b:
+                return
+            chunk = self.image_b[0]
+            yield chunk
+            self.image_b = self.image_b[1:]
 
-    async def next(self):
-        class Field:
-            def __init__(self):
-                self.filename = TEST_FILE_NAME
-
-        return Field()
 
 class SyncConn:
 
     def put_object(self, *args, **kwargs):
         pass
+
 
 class AsyncConn:
 
@@ -135,8 +129,8 @@ class TestLocalFileStorage:
         file_name = 'default.png'
         full_path = os.path.join(images_dir, file_name)
         mocker.patch.object(os.path, "join", return_value=full_path)
-        field = MockMultipartReader()
-        await local_storage.save_default(file_name, field)
+        adapter = MockAdapter()
+        await local_storage.save_default(file_name, adapter)
         assert os.path.exists(os.path.join(images_dir, file_name))
 
     @pytest.mark.asyncio
@@ -213,8 +207,8 @@ class TestAmazonFileStorage:
         file_name = 'default.png'
         full_path = os.path.join(images_dir, file_name)
         mocker.patch.object(os.path, "join", return_value=full_path)
-        field = MockMultipartReader()
-        await aws_storage.save_default(file_name, field)
+        adapter = MockAdapter()
+        await aws_storage.save_default(file_name, adapter)
         assert os.path.exists(os.path.join(images_dir, file_name))
 
     @pytest.mark.asyncio

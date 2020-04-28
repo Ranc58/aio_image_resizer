@@ -11,6 +11,7 @@ from botocore.client import BaseClient
 from botocore.exceptions import EndpointConnectionError, ClientError
 
 from config import CONFIG
+from service.adapters import AdapterBase
 
 
 class ImageNotFoundError(BaseException):
@@ -32,7 +33,7 @@ class FileStorage(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def save_result(self, image: bytearray, image_name: str) -> str:
+    def save_result(self, image: bytes, image_name: str) -> str:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -40,17 +41,17 @@ class FileStorage(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    # async because used in aiohttp handler
+    # async because used in handlers
     async def save_default(self, filename: str, field: BodyPartReader) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    # async because used in aiohttp handler
+    # async because used in handlers
     async def delete_result(self, file_path: str) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    # async because used in aiohttp handler
+    # async because used in handlers
     async def write_result(self, file_path: str, response: StreamResponse) -> None:
         raise NotImplementedError
 
@@ -68,7 +69,7 @@ class LocalFileStorage(FileStorage):
             image = f.read()
         return image
 
-    def save_result(self, image: bytearray, image_name: str) -> str:
+    def save_result(self, image: bytes, image_name: str) -> str:
         if not os.path.exists(self.images_path,):
             raise PathNotFoundError(f"Not found {self.images_path}")
         full_path = os.path.join(self.images_path, f'resized_{image_name}')
@@ -84,13 +85,10 @@ class LocalFileStorage(FileStorage):
             raise ImageNotFoundError(f"Not found {full_path}")
         os.remove(full_path)
 
-    async def save_default(self, filename: str, field: BodyPartReader) -> None:
+    async def save_default(self, filename: str, view_adapter: AdapterBase) -> None:
         async with AIOFile(os.path.join(self.images_path, filename), 'wb') as f:
             writer = Writer(f)
-            while True:
-                chunk = await field.read_chunk()
-                if not chunk:
-                    break
+            async for chunk in view_adapter.read():
                 await writer(chunk)
             await f.fsync()
 
@@ -99,14 +97,13 @@ class LocalFileStorage(FileStorage):
             raise ImageNotFoundError(f"Not found {file_path}")
         await remove(file_path)
 
-    async def write_result(self, file_path: str, response: StreamResponse) -> None:
+    async def write_result(self, file_path: str, view_adapter: AdapterBase) -> None:
         try:
             async with AIOFile(file_path, 'rb') as f:
                 async for line in LineReader(f):
-                    await response.write(line)
+                    await view_adapter.write(line)
         except FileNotFoundError:
             raise PathNotFoundError(f"Not found {self.images_path}")
-
 
 
 class AmazonFileStorage(FileStorage):
@@ -163,13 +160,10 @@ class AmazonFileStorage(FileStorage):
             raise ImageNotFoundError(f"Not found {full_path}")
         os.remove(full_path)
 
-    async def save_default(self, filename: str, field: BodyPartReader) -> None:
+    async def save_default(self, filename: str, view_adapter: AdapterBase) -> None:
         async with AIOFile(os.path.join(self.images_path, filename), 'wb') as f:
             writer = Writer(f)
-            while True:
-                chunk = await field.read_chunk()
-                if not chunk:
-                    break
+            async for chunk in view_adapter.read():
                 await writer(chunk)
             await f.fsync()
 
@@ -184,7 +178,7 @@ class AmazonFileStorage(FileStorage):
             ) as e:
                 raise ConnectionStorageError(f"Connection error for AWS: {e}")
 
-    async def write_result(self, file_path: str, response: StreamResponse) -> None:
+    async def write_result(self, file_path: str, view_adapter: AdapterBase) -> None:
         key = file_path
         async with self._get_client() as client:
             try:
@@ -197,4 +191,4 @@ class AmazonFileStorage(FileStorage):
                 raise ConnectionStorageError(f"Connection error for AWS: {e}")
             async with response_aws['Body'] as stream:
                 body = await stream.read()
-                await response.write(body)
+                await view_adapter.write(body)

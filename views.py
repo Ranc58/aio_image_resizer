@@ -1,3 +1,4 @@
+import abc
 import logging
 import uuid
 import datetime
@@ -10,6 +11,7 @@ from aiohttp_apispec import request_schema
 from serializer import ImageSchema
 from models.Image import ImageData
 from config import CONFIG
+from service import AiohttpAdapter
 from service.file_storage import ImageNotFoundError, ConnectionStorageError, PathNotFoundError
 
 logger = logging.getLogger('app_logger')
@@ -17,12 +19,15 @@ logger = logging.getLogger('app_logger')
 
 @request_schema(ImageSchema(), locations=['query'])
 async def load_image(request: Request) -> json_response:
-    # todo think about validate file
+    # todo think about validate file and fields
     reader = await request.multipart()
-    field = await reader.next()
+    file_name_field = await reader.next()
+    file_name = await file_name_field.read()
+    decoded_file_name = file_name.decode(encoding="UTF-8")
+    adapter = AiohttpAdapter(request=request)
     current_timestamp = datetime.datetime.now().timestamp()
-    filename = f'{current_timestamp}-{field.filename}'
-    await request.app.files_storage.save_default(filename, field)
+    filename = f'{current_timestamp}-{decoded_file_name}'
+    await request.app.files_storage.save_default(filename, adapter)
     file_id = str(uuid.uuid4())[:13]
     file_data = ImageData(
         id=file_id,
@@ -65,8 +70,9 @@ async def get_image(request: Request) -> StreamResponse:
     response.headers['Content-Disposition'] = f'attachment; filename="{file_data.get("file_name")}"'
     await response.prepare(request)
     file_path = file_data.get('updated_file_path')
+    adapter = AiohttpAdapter(response=response)
     try:
-        await request.app.files_storage.write_result(file_path, response)
+        await request.app.files_storage.write_result(file_path, adapter)
     except (ConnectionStorageError, PathNotFoundError) as e:
         logger.error(e)
         response.force_close()

@@ -1,10 +1,10 @@
 import io
-from typing import Callable, Union, Any, Optional, Tuple
+from typing import Union, Optional, Tuple
 
 from PIL import Image
 
 from service.file_storage import ImageNotFoundError, PathNotFoundError, AmazonFileStorage, LocalFileStorage, \
-    ConnectionStorageError
+    ConnectionStorageError, FileStorage
 
 
 class ImageResizerError(BaseException):
@@ -13,7 +13,7 @@ class ImageResizerError(BaseException):
 
 class ImageResizer:
 
-    def __init__(self, file_storage: Union[AmazonFileStorage, LocalFileStorage]) -> None:
+    def __init__(self, file_storage: FileStorage) -> None:
         self.file_storage = file_storage
         self.image_name = None
         self.width = None

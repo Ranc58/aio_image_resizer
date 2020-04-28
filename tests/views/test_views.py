@@ -2,6 +2,7 @@ import asyncio
 import os
 import uuid
 
+import funcy
 import pytest
 from aiofile import AIOFile, LineReader
 from aiohttp import web
@@ -11,8 +12,29 @@ from aiohttp_apispec import setup_aiohttp_apispec, validation_middleware
 from config import CONFIG
 from service.file_storage import ImageNotFoundError, PathNotFoundError
 from tests.service.conftest import TEST_FILE_NAME, IMAGE_BYTES
-from tests.service.test_file_storage import MockMultipartReader
 from views import load_image, get_image, check_status
+
+
+class MockMultipartReader:
+
+    def __init__(self):
+        self.image_b = list(funcy.chunks(10000, IMAGE_BYTES))
+
+    async def read_chunk(self):
+        if not self.image_b:
+            return
+        chunk = self.image_b[0]
+        self.image_b = self.image_b[1:]
+        return chunk
+
+    async def next(self):
+        class Field:
+            def __init__(self):
+                self.filename = TEST_FILE_NAME
+
+            async def read(self):
+                return TEST_FILE_NAME.encode(encoding='UTF-8')
+        return Field()
 
 
 class MockFilesStorage:
