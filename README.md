@@ -39,7 +39,7 @@ Python version required: 3.7+
 `python3 main.py`
 
 Then you can use this handlers for work
-1) `/api/v1/image` - `POST` request with `multipart` file. And you need add some query params : \
+1) `/api/v1/image` - `POST` request with `multipart` file(first filed must be filename and second field - file) And you need add some query params : \
         1. `-s --scale` scale to resize image. \
         2. `-ws --width` width of out image. \
         3. `-hs --height` height of out image. \
