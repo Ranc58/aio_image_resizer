@@ -39,7 +39,7 @@ async def load_image(request: Request) -> json_response:
     )
     await request.app.repository.insert(file_id, file_data.to_json())
     await request.app.input_images_queue.put(file_id)
-    return web.json_response(data={"id": file_id, "status": "loaded"}, status=201)
+    return web.json_response(data={"id": file_id, "status": "loaded"}, status=202)
 
 
 async def check_status(request: Request) -> json_response:
